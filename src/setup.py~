@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+"""
+setup.py file for bgsubcnt
+"""
+
+from distutils.core import setup, Extension
+import os.path
+import numpy as np
+
+my_module = Extension('beetracktracker',
+                           sources=['opencv_swig_python.cpp','BeeTrackTracker.cpp'], # would it be better to link with the shared lib?
+			   include_dirs=['', np.get_include()],
+			   library_dirs=['/usr/local/share/OpenCV/3rdparty/lib/'],
+			   libraries=["boost_python-py35",
+"opencv_stitching",
+"opencv_superres",
+"opencv_videostab",
+"opencv_aruco",
+"opencv_bgsegm",
+"opencv_bioinspired",
+"opencv_ccalib",
+"opencv_dnn",
+"opencv_dpm",
+"opencv_fuzzy",
+"opencv_hdf",
+"opencv_line_descriptor",
+"opencv_optflow",
+"opencv_plot",
+"opencv_reg",
+"opencv_saliency",
+"opencv_stereo",
+"opencv_structured_light",
+"opencv_rgbd",
+"opencv_surface_matching",
+"opencv_tracking",
+"opencv_datasets",
+"opencv_text",
+"opencv_face",
+"opencv_xfeatures2d",
+"opencv_shape",
+"opencv_video",
+"opencv_ximgproc",
+"opencv_calib3d",
+"opencv_features2d",
+"opencv_flann",
+"opencv_xobjdetect",
+"opencv_objdetect",
+"opencv_ml",
+"opencv_xphoto",
+"ippicv",
+"opencv_highgui",
+"opencv_videoio",
+"opencv_imgcodecs",
+"opencv_photo",
+"opencv_imgproc",
+"opencv_core"])
+
+setup (name        = 'beetracktracker',
+       version     = '0.1',
+       author      = "Olivier Bertrand",
+       description = 'Tracking of Bees',
+       license     = 'Universität Bielefeld',
+       ext_modules = [my_module],
+       py_modules  = ["beetracktracker"],
+       requires    = ["numpy", "cv2"]
+)
+
+
+"""
+from distutils.core import setup
+from distutils.extension import Extension
+import numpy as np
+setup(name="BeeTrack",
+    ext_modules=[
+        Extension("BeeTrackTracker", ["BeeTrackTracker.cpp","opencv_swig_python.cpp"],
+		include_dirs=[np.get_include()],
+		library_dirs = [,
+						'/home/bolirev/ownCloud/Olivier_B/Some_tools/BeeTracker_Tri/pyboostcvconverter.git/'],
+        libraries = [])
+    ])
+"""

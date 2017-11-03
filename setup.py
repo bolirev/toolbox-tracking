@@ -6,6 +6,7 @@ for install it needs:
 pip install opencv-python
 pip install matplotlib
 pip install pandas
+pip install scipy
 python install setup.py
 
 """

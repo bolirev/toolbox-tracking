@@ -7,12 +7,15 @@ pip install opencv-python
 pip install matplotlib
 pip install pandas
 pip install scipy
+
+sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran
+sudo apt-get install libboost-all-dev
 python install setup.py
 
 """
 import sys
+import os
 from setuptools import setup, find_packages, Extension
-
 
 try:
     import numpy as np
@@ -29,14 +32,22 @@ except ImportError:
     else:
         raise ImportError("Numpy required before installation.")
 
+if sys.platform == "win32" :
+    include_dirs = ["C:/Boost/include/boost-1_32","."]
+    libraries=["boost_python-mgw"]
+    library_dirs=['C:/Boost/lib']
+else :
+    include_dirs = ["/usr/include/boost-1_32","."]
+    libraries=["boost_python-gcc"]
+    library_dirs=['/usr/local/lib']
 
 my_module = Extension('beetracktracker',
                       # would it be better to link with the shared lib?
                       sources=['src/cpp/opencv_swig_python.cpp',
                                'src/cpp/BeeTrackTracker.cpp'],
                       include_dirs=['', np.get_include()],
-                      library_dirs=['/usr/local/share/OpenCV/3rdparty/lib/'],
-                      libraries=["boost_python-py35",
+                      library_dirs=['/usr/local/lib'],
+                      libraries=["boost_python-py36",
                                  "opencv_stitching",
                                  "opencv_superres",
                                  "opencv_videostab",
@@ -47,7 +58,6 @@ my_module = Extension('beetracktracker',
                                  "opencv_dnn",
                                  "opencv_dpm",
                                  "opencv_fuzzy",
-                                 "opencv_hdf",
                                  "opencv_line_descriptor",
                                  "opencv_optflow",
                                  "opencv_plot",
@@ -72,7 +82,6 @@ my_module = Extension('beetracktracker',
                                  "opencv_objdetect",
                                  "opencv_ml",
                                  "opencv_xphoto",
-                                 "ippicv",
                                  "opencv_highgui",
                                  "opencv_videoio",
                                  "opencv_imgcodecs",
@@ -88,5 +97,5 @@ setup(name='beetracktracker',
       ext_modules=[my_module],
       py_modules=["beetracktracker"],
       packages=find_packages(exclude=["docs"]),
-      requires=['numpy', 'cv2'],
-      install_requires=["numpy", "opencv-python"])
+      requires=['numpy', 'cv2', 'pandas', 'scipy'],
+      install_requires=["numpy", 'pandas', 'scipy'])

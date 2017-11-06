@@ -1,5 +1,5 @@
 import unittest
-import beetracktracker as bt
+#import beetracktracker as bt
 import cv2
 import numpy as np
 

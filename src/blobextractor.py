@@ -6,8 +6,7 @@ import cv2
 import numpy as np
 print(cv2.__version__)
 
-
-class BlobExtractor():
+class BlobFinder():
 
     def __init__(self, mask_image):
         # Define get only variable variable
@@ -20,7 +19,6 @@ class BlobExtractor():
         self.__processed_image = None
         self.__contours = None
         self.__filtered_contours = None
-        self.__cropped_images = None
         # Define 'private' variable
         self.__fgbg = cv2.createBackgroundSubtractorKNN()
         # Declare parameters
@@ -37,7 +35,6 @@ class BlobExtractor():
         self.threshold = 10
         self.gaussian_blur = 21
         self.skip_filter_contours = False
-        self.skip_crop = False
 
     @property
     def original_image(self):
@@ -76,15 +73,8 @@ class BlobExtractor():
         if self.skip_filter_contours:
             self.filter_contours()
         toreturn = self.__filtered_contours
-        self.__filtered_contours = None
-        return toreturn
-
-    @property
-    def croped_images(self):
-        if self.skip_crop:
-            self.crop()
-        toreturn = self.__cropped_images
-        self.__cropped_images = None
+        if self.skip_filter_contours:
+            self.__filtered_contours = None
         return toreturn
 
     def run(self, image):
@@ -104,8 +94,6 @@ class BlobExtractor():
         self.find_contours()
         if not self.skip_filter_contours:
             self.filter_contours()
-            if not self.skip_crop:
-                self.crop()
 
     def mask(self):
         if self.mask_image is not None:
@@ -164,11 +152,37 @@ class BlobExtractor():
             # Everything passed
             self.__filtered_contours.append(ellipse)
 
-    def crop(self):
-        if self.skip_filter_contours:
-            self.filter_contours()
-        contours = self.__filtered_contours
-        if self.skip_filter_contours:
-            self.__filtered_contours = None
-        for cont in contours:
-            pass
+
+class BlobCroper():
+    def __init__(self,xmargin=[0,0],ymargin=[0,0]):
+        self.xmargin=xmargin
+        self.ymargin=ymargin
+
+    def ellipse_spread(self,ell):
+        angle=np.deg2rad(ell[2])
+        x_spread=2*np.sqrt(((ell[1][0]/2)*np.cos(angle))**2 + \
+                           ((ell[1][1]/2)*np.sin(angle))**2)
+        y_spread=2*np.sqrt(((ell[1][0]/2)*np.sin(angle))**2 + \
+                           ((ell[1][1]/2)*np.cos(angle))**2)
+        return x_spread,y_spread
+    
+    def crop(self,image,ellipses):
+        croped_images=list()
+        for ell in ellipses:
+            y_spread,x_spread=self.ellipse_spread(ell)
+            y_range=np.arange(np.floor(ell[0][0]-y_spread/2) \
+                              -self.ymargin[0],
+                              np.ceil(ell[0][0]+y_spread/2) \
+                              +self.ymargin[1])
+            y_range=y_range.astype(np.int)
+            x_range=np.arange(np.floor(ell[0][1]-x_spread/2) \
+                              -self.xmargin[0],
+                              np.ceil(ell[0][1]+x_spread/2) \
+                              +self.xmargin[1])
+            x_range=x_range.astype(np.int)
+            y_range=np.clip(y_range,0,image.shape[1]-1)
+            x_range=np.clip(x_range,0,image.shape[0]-1)
+            croped_im=image[x_range,:]
+            croped_im=croped_im[:,y_range]
+            croped_images.append(croped_im)
+        return croped_images

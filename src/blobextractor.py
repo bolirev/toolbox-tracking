@@ -4,7 +4,8 @@ BlobExtractor is a class for extracting elliptical object from the background
 # import the necessary packages
 import cv2
 import numpy as np
-print(cv2.__version__)
+import pandas as pd
+
 
 class BlobFinder():
 
@@ -154,35 +155,161 @@ class BlobFinder():
 
 
 class BlobCroper():
-    def __init__(self,xmargin=[0,0],ymargin=[0,0]):
-        self.xmargin=xmargin
-        self.ymargin=ymargin
+    def __init__(self, xmargin=[0, 0], ymargin=[0, 0]):
+        self.xmargin = xmargin
+        self.ymargin = ymargin
 
-    def ellipse_spread(self,ell):
-        angle=np.deg2rad(ell[2])
-        x_spread=2*np.sqrt(((ell[1][0]/2)*np.cos(angle))**2 + \
-                           ((ell[1][1]/2)*np.sin(angle))**2)
-        y_spread=2*np.sqrt(((ell[1][0]/2)*np.sin(angle))**2 + \
-                           ((ell[1][1]/2)*np.cos(angle))**2)
-        return x_spread,y_spread
-    
-    def crop(self,image,ellipses):
-        croped_images=list()
+    def ellipse_spread(self, ell):
+        angle = np.deg2rad(ell[2])
+        x_spread = 2 * np.sqrt(((ell[1][0] / 2) * np.cos(angle))**2 +
+                               ((ell[1][1] / 2) * np.sin(angle))**2)
+        y_spread = 2 * np.sqrt(((ell[1][0] / 2) * np.sin(angle))**2 +
+                               ((ell[1][1] / 2) * np.cos(angle))**2)
+        return x_spread, y_spread
+
+    def crop(self, image, ellipses):
+        croped_images = list()
         for ell in ellipses:
-            y_spread,x_spread=self.ellipse_spread(ell)
-            y_range=np.arange(np.floor(ell[0][0]-y_spread/2) \
-                              -self.ymargin[0],
-                              np.ceil(ell[0][0]+y_spread/2) \
-                              +self.ymargin[1])
-            y_range=y_range.astype(np.int)
-            x_range=np.arange(np.floor(ell[0][1]-x_spread/2) \
-                              -self.xmargin[0],
-                              np.ceil(ell[0][1]+x_spread/2) \
-                              +self.xmargin[1])
-            x_range=x_range.astype(np.int)
-            y_range=np.clip(y_range,0,image.shape[1]-1)
-            x_range=np.clip(x_range,0,image.shape[0]-1)
-            croped_im=image[x_range,:]
-            croped_im=croped_im[:,y_range]
+            y_spread, x_spread = self.ellipse_spread(ell)
+            y_range = np.arange(np.floor(ell[0][0] - y_spread / 2)
+                                - self.ymargin[0],
+                                np.ceil(ell[0][0] + y_spread / 2)
+                                + self.ymargin[1])
+            y_range = y_range.astype(np.int)
+            x_range = np.arange(np.floor(ell[0][1] - x_spread / 2)
+                                - self.xmargin[0],
+                                np.ceil(ell[0][1] + x_spread / 2)
+                                + self.xmargin[1])
+            x_range = x_range.astype(np.int)
+            y_range = np.clip(y_range, 0, image.shape[1] - 1)
+            x_range = np.clip(x_range, 0, image.shape[0] - 1)
+            croped_im = image[x_range, :]
+            croped_im = croped_im[:, y_range]
             croped_images.append(croped_im)
         return croped_images
+
+
+class BlobFilter():
+    def __init__(self, histogram, bin_edges):
+        self.__edges = bin_edges
+        self.__refcumsum = self.hist2cumsum(histogram)
+
+    def hist2cumsum(self, hist):
+        return np.cumsum(hist / np.sum(hist))
+
+    def image2hist(self, image):
+        image = image.flatten()
+        image = image[np.isnan(image) == False]
+        hist, _ = np.histogram(image, bins=self.__edges)
+        return hist
+
+    def score(self, images):
+        if not isinstance(images, list):
+            raise TypeError('images should be a list of numpy array')
+        if len(images) == 0:
+            return None
+        if not isinstance(images[0], np.ndarray):
+            raise TypeError('images should be a list of numpy array')
+
+        scores = np.zeros(len(images))
+        for im_i in range(scores.shape[0]):
+            hist = self.image2hist(images[im_i])
+            cumsum = self.hist2cumsum(hist)
+            score = np.sqrt(np.mean((cumsum - self.__refcumsum)**2))
+            scores[im_i] = score
+        return scores
+
+
+class BlobMatcher():
+    def __init__(self):
+        self.__features = dict()
+        self.__features['rdistance'] = self.rdistance
+        self.__features['rarea'] = self.area
+        self.__features['rangle'] = self.angle
+        self.__features['rroundness'] = self.roundness
+        self.weights = pd.Series(index=list(self.__features.keys()),
+                                 data=0)
+        self.weights.distance = 1
+        self.__score_matrix = None
+
+    @property
+    def features(self):
+        return list(self.__features.keys())
+
+    def rdistance(self):
+        refdim = len(self.__reference)
+        tardim = len(self.__target)
+        score_matrix = np.zeros(refdim, tardim)
+        for refi in range(refdim):
+            xref = self.__reference[refi][0][0]
+            yref = self.__reference[refi][0][1]
+            for tari in range(refi, tardim):
+                xtar = self.__reference[tari][0][0]
+                ytar = self.__reference[tari][0][1]
+                score_matrix[refi, tari] = np.sqrt(
+                    (xref - xtar)**2 + (yref - ytar)**2)
+                score_matrix[tari, refi] = score_matrix[refi, tari]
+        score_matrix = score_matrix / score_matrix.max()
+        score_matrix = 1 - score_matrix
+        return score_matrix
+
+    def rroundness(self):
+        refdim = len(self.__reference)
+        tardim = len(self.__target)
+        score_matrix = np.zeros(refdim, tardim)
+        for refi in range(refdim):
+            xref = self.__reference[refi][0][0]
+            yref = self.__reference[refi][0][1]
+            for tari in range(refi, tardim):
+                xtar = self.__reference[tari][0][0]
+                ytar = self.__reference[tari][0][1]
+                score_matrix[refi, tari] = np.sqrt(
+                    (xref - xtar)**2 + (yref - ytar)**2)
+                score_matrix[tari, refi] = score_matrix[refi, tari]
+        score_matrix = score_matrix / score_matrix.max()
+        score_matrix = 1 - score_matrix
+        return score_matrix
+
+    def rarea(self):
+        refdim = len(self.__reference)
+        tardim = len(self.__target)
+        score_matrix = np.zeros(refdim, tardim)
+        for refi in range(refdim):
+            href = self.__reference[refi][1][0]
+            wref = self.__reference[refi][1][1]
+            rref = href / wref
+            for tari in range(refi, tardim):
+                htar = self.__target[tari][1][0]
+                wtar = self.__target[tari][1][1]
+                rtar = htar / wtar
+                score_matrix[refi, tari] = np.abs(rref - rtar)
+                score_matrix[tari, refi] = score_matrix[refi, tari]
+        score_matrix = score_matrix / score_matrix.max()
+        score_matrix = 1 - score_matrix
+        return score_matrix
+
+    def rangle(self):
+        refdim = len(self.__reference)
+        tardim = len(self.__target)
+        score_matrix = np.zeros(refdim, tardim)
+        for refi in range(refdim):
+            aref = self.__reference[refi][2]
+            for tari in range(refi, tardim):
+                atar = self.__target[tari][2]
+                score_matrix[refi, tari] = np.abs(np.cos(aref - atar))
+                score_matrix[tari, refi] = score_matrix[refi, tari]
+        score_matrix = score_matrix / score_matrix.max()
+        return score_matrix
+
+    def __score(self):
+        refdim = len(self.__reference)
+        tardim = len(self.__target)
+        self.__score_matrix = np.zeros(refdim, tardim)
+        for key, method in self.__features:
+            self.__fscore[key] = method()
+
+        return (self.weights * self.__fscore).sum()
+
+    def match(self, ref_ellipses, ellipses):
+        self.__reference = ref_ellipses
+        self.__target = ellipses

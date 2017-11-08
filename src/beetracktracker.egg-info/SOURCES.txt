@@ -1,8 +1,0 @@
-setup.py
-beetracktracker.egg-info/PKG-INFO
-beetracktracker.egg-info/SOURCES.txt
-beetracktracker.egg-info/dependency_links.txt
-beetracktracker.egg-info/requires.txt
-beetracktracker.egg-info/top_level.txt
-cpp/BeeTrackTracker.cpp
-cpp/opencv_swig_python.cpp

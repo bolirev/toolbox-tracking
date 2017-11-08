@@ -1,10 +1,37 @@
 import unittest
-from blobextractor import BlobFinder
+from btracker.blobs.finder import BlobFinder
 import cv2
 import numpy as np
 
 
 class TestBlobExtractor(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestBlobExtractor, self).__init__(*args, **kwargs)
+        self.run_ntimes_oneblob()
+
+    def run_ntimes_oneblob(self):
+        """
+        Run the BlobFinder on one blob
+        """
+        self.mask, self.background = self.get_maskbackground()
+        blob = self.get_randomblob(self.mask, self.background)[0]
+        self.bfinder = self.get_blobfinder()
+        # init background
+        for _ in range(10):
+            blob = self.get_randomblob(self.mask, self.background)[0]
+            self.bfinder.run(blob)
+
+        self.blobs_center = list()
+        self.blobs_found = list()
+        for frame_i in range(10):
+            blob, blob_center, _, _ = \
+                self.get_randomblob(self.mask, self.background)
+            self.bfinder.run(blob)
+            self.blobs_center.append(blob_center)
+            self.blobs_found.append(self.bfinder.filtered_contours)
+
+        self.blob = blob
+
     def get_maskbackground(self):
         background = (np.random.rand(1080, 1980) * 100).astype(np.uint8) + 128
         mask = background.copy()
@@ -49,38 +76,18 @@ class TestBlobExtractor(unittest.TestCase):
         self.assertTrue(np.allclose(myim, blob))
 
     def test_masked(self):
-        mask, image = self.get_maskbackground()
-        blob = self.get_randomblob(mask, image)[0]
-        bfinder = self.get_blobfinder()
-        bfinder.run(blob)
-        myim = bfinder.masked_image
-        testimage = cv2.bitwise_and(blob, blob, mask=mask)
+        myim = self.bfinder.masked_image
+        testimage = cv2.bitwise_and(self.blob, self.blob, mask=self.mask)
         self.assertTrue(np.allclose(myim, testimage))
 
     def test_segmented(self):
-        mask, background = self.get_maskbackground()
-        bfinder = self.get_blobfinder()
-        for _ in range(2):
-            blob = self.get_randomblob(mask, background)[0]
-            bfinder.run(blob)
-        myim = bfinder.segmented_image
+        myim = self.bfinder.segmented_image
         self.assertTrue(np.allclose(np.unique(myim), [0, 255]))
 
-    def test_oneblob(self):
-        mask, background = self.get_maskbackground()
-        blob = self.get_randomblob(mask, background)[0]
-        bfinder = self.get_blobfinder()
-        # init background
-        for _ in range(10):
-            blob = self.get_randomblob(mask, background)[0]
-            bfinder.run(blob)
-
+    def test_oneblob_numbers(self):
         condition = True
-        for frame_i in range(10):
-            blob, blob_center, _, blob_angle = self.get_randomblob(
-                mask, background)
-            bfinder.run(blob)
-            contours = bfinder.filtered_contours
+        for frame_i in range(len(self.blobs_center)):
+            contours = self.blobs_found[frame_i]
             if len(contours) > 1:
                 print('Too many blobs detected')
                 condition = False
@@ -89,12 +96,18 @@ class TestBlobExtractor(unittest.TestCase):
                 print('Too few blobs detected')
                 condition = False
                 continue
+        self.assertTrue(condition)
+
+    def test_oneblob_positions(self):
+        condition = True
+        for frame_i in range(len(self.blobs_center)):
+            contours = self.blobs_found[frame_i]
             contours = contours[0]
-            px_error = np.sqrt(np.sum(contours[0] - blob_center)**2)
+            px_error = np.sqrt(np.sum(contours.center
+                                      - self.blobs_center[frame_i])**2)
             if px_error > 1:
                 print('Pixel error too large : {}'.format(px_error))
                 condition = False
-        #
         self.assertTrue(condition)
 
 

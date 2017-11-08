@@ -135,6 +135,7 @@ class BlobFinder():
     def filter_contours(self):
         # loop over the contours
         self.__filtered_contours = list()
+        ellipse = Ellipse()
         for cont in self.__contours:
             # The blob should be fitted with an ellipse
             # We can not do that if the contours contain less than 5 points
@@ -144,9 +145,9 @@ class BlobFinder():
             if (cv2.contourArea(cont) < min(self.area_lim)) or \
                     (cv2.contourArea(cont) > max(self.area_lim)):
                 continue
-            ellipse = cv2.fitEllipse(cont)
+            ellipse.from_opencv_tuples(cv2.fitEllipse(cont))
             # Roundness
-            roundness = ellipse[1][0] / ellipse[1][1]
+            roundness = ellipse.roundness
             if (roundness < min(self.roundness_lim)) or \
                (roundness > max(self.roundness_lim)):
                 continue
@@ -159,26 +160,18 @@ class BlobCroper():
         self.xmargin = xmargin
         self.ymargin = ymargin
 
-    def ellipse_spread(self, ell):
-        angle = np.deg2rad(ell[2])
-        x_spread = 2 * np.sqrt(((ell[1][0] / 2) * np.cos(angle))**2 +
-                               ((ell[1][1] / 2) * np.sin(angle))**2)
-        y_spread = 2 * np.sqrt(((ell[1][0] / 2) * np.sin(angle))**2 +
-                               ((ell[1][1] / 2) * np.cos(angle))**2)
-        return x_spread, y_spread
-
     def crop(self, image, ellipses):
         croped_images = list()
         for ell in ellipses:
-            y_spread, x_spread = self.ellipse_spread(ell)
-            y_range = np.arange(np.floor(ell[0][0] - y_spread / 2)
+            y_spread, x_spread = ell.spread()
+            y_range = np.arange(np.floor(ell.x - y_spread / 2)
                                 - self.ymargin[0],
-                                np.ceil(ell[0][0] + y_spread / 2)
+                                np.ceil(ell.x + y_spread / 2)
                                 + self.ymargin[1])
             y_range = y_range.astype(np.int)
-            x_range = np.arange(np.floor(ell[0][1] - x_spread / 2)
+            x_range = np.arange(np.floor(ell.y - x_spread / 2)
                                 - self.xmargin[0],
-                                np.ceil(ell[0][1] + x_spread / 2)
+                                np.ceil(ell.y + x_spread / 2)
                                 + self.xmargin[1])
             x_range = x_range.astype(np.int)
             y_range = np.clip(y_range, 0, image.shape[1] - 1)
@@ -241,11 +234,11 @@ class BlobMatcher():
         tardim = len(self.__target)
         score_matrix = np.zeros(refdim, tardim)
         for refi in range(refdim):
-            xref = self.__reference[refi][0][0]
-            yref = self.__reference[refi][0][1]
+            xref = self.__reference[refi].x
+            yref = self.__reference[refi].y
             for tari in range(refi, tardim):
-                xtar = self.__reference[tari][0][0]
-                ytar = self.__reference[tari][0][1]
+                xtar = self.__reference[tari].x
+                ytar = self.__reference[tari].y
                 score_matrix[refi, tari] = np.sqrt(
                     (xref - xtar)**2 + (yref - ytar)**2)
                 score_matrix[tari, refi] = score_matrix[refi, tari]
@@ -258,13 +251,10 @@ class BlobMatcher():
         tardim = len(self.__target)
         score_matrix = np.zeros(refdim, tardim)
         for refi in range(refdim):
-            xref = self.__reference[refi][0][0]
-            yref = self.__reference[refi][0][1]
+            rref = self.__reference[refi].roundness
             for tari in range(refi, tardim):
-                xtar = self.__reference[tari][0][0]
-                ytar = self.__reference[tari][0][1]
-                score_matrix[refi, tari] = np.sqrt(
-                    (xref - xtar)**2 + (yref - ytar)**2)
+                rtar = self.__reference[tari].roundness
+                score_matrix[refi, tari] = np.sqrt((rref - rtar)**2)
                 score_matrix[tari, refi] = score_matrix[refi, tari]
         score_matrix = score_matrix / score_matrix.max()
         score_matrix = 1 - score_matrix
@@ -275,14 +265,10 @@ class BlobMatcher():
         tardim = len(self.__target)
         score_matrix = np.zeros(refdim, tardim)
         for refi in range(refdim):
-            href = self.__reference[refi][1][0]
-            wref = self.__reference[refi][1][1]
-            rref = href / wref
+            aref = self.__reference[refi].area
             for tari in range(refi, tardim):
-                htar = self.__target[tari][1][0]
-                wtar = self.__target[tari][1][1]
-                rtar = htar / wtar
-                score_matrix[refi, tari] = np.abs(rref - rtar)
+                atar = self.__target[tari].area
+                score_matrix[refi, tari] = np.abs(aref - atar)
                 score_matrix[tari, refi] = score_matrix[refi, tari]
         score_matrix = score_matrix / score_matrix.max()
         score_matrix = 1 - score_matrix
@@ -293,9 +279,9 @@ class BlobMatcher():
         tardim = len(self.__target)
         score_matrix = np.zeros(refdim, tardim)
         for refi in range(refdim):
-            aref = self.__reference[refi][2]
+            aref = self.__reference[refi].angle
             for tari in range(refi, tardim):
-                atar = self.__target[tari][2]
+                atar = self.__target[tari].angle
                 score_matrix[refi, tari] = np.abs(np.cos(aref - atar))
                 score_matrix[tari, refi] = score_matrix[refi, tari]
         score_matrix = score_matrix / score_matrix.max()

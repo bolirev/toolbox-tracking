@@ -1,0 +1,9 @@
+"""
+
+"""
+import numpy as np
+import cv2
+
+
+def original_image(bfinder, scale=0.2, frame_i=None):
+    im2display = bfinder.original_image

@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 
 
-class TestBlobExtractor(unittest.TestCase):
+class TestBlobFinder(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestBlobExtractor, self).__init__(*args, **kwargs)
+        super(TestBlobFinder, self).__init__(*args, **kwargs)
         self.run_ntimes_oneblob()
 
     def run_ntimes_oneblob(self):

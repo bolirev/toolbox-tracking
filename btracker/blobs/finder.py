@@ -135,8 +135,8 @@ class BlobFinder():
     def filter_contours(self):
         # loop over the contours
         self.__filtered_contours = list()
-        ellipse = Ellipse()
         for cont in self.__contours:
+            ellipse = Ellipse()
             # The blob should be fitted with an ellipse
             # We can not do that if the contours contain less than 5 points
             if len(cont) < 5:

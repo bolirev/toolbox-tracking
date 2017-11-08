@@ -1,5 +1,6 @@
 import unittest
 from btracker.blobs.finder import BlobFinder
+from btracker.tools.generator import background,mask,randomblob
 import cv2
 import numpy as np
 
@@ -13,67 +14,29 @@ class TestBlobFinder(unittest.TestCase):
         """
         Run the BlobFinder on one blob
         """
-        self.mask, self.background = self.get_maskbackground()
-        blob = self.get_randomblob(self.mask, self.background)[0]
-        self.bfinder = self.get_blobfinder()
+        self.background = background()
+        self.mask = mask(self.background)
+        blob = randomblob(self.background)[0]
+        self.bfinder = BlobFinder(self.mask)
         # init background
         for _ in range(10):
-            blob = self.get_randomblob(self.mask, self.background)[0]
+            blob = randomblob(self.background)[0]
             self.bfinder.run(blob)
 
         self.blobs_center = list()
         self.blobs_found = list()
         for frame_i in range(10):
             blob, blob_center, _, _ = \
-                self.get_randomblob(self.mask, self.background)
+                randomblob(self.background)
             self.bfinder.run(blob)
             self.blobs_center.append(blob_center)
             self.blobs_found.append(self.bfinder.filtered_contours)
 
         self.blob = blob
 
-    def get_maskbackground(self):
-        background = (np.random.rand(1080, 1980) * 100).astype(np.uint8) + 128
-        mask = background.copy()
-        mask[:] = 0
-        cv2.circle(mask, (mask.shape[1] // 2,
-                          mask.shape[0] // 2),
-                   mask.shape[0] // 2, (255, 0, 0), -1)
-        return mask, background
-
-    def get_randomblob(self, mask, background, color=20):
-        blob = background.copy()
-        blob_max_radius = mask.shape[0] // 20
-        blob_min_radius = 5
-        blob_center = (np.random.rand(2) - 0.5) *\
-            (mask.shape[0] // 2 - blob_max_radius)
-        blob_center[0] += mask.shape[1] // 2
-        blob_center[1] += mask.shape[0] // 2
-        blob_center = blob_center.astype(np.uint)
-        blob_axes = np.random.rand(2) * (blob_max_radius - blob_min_radius)
-        blob_axes += blob_min_radius
-        blob_axes = blob_axes.astype(np.uint)
-        blob_axes.sort()
-        blob_angle = np.random.rand() * 180
-        cv2.ellipse(blob,
-                    (blob_center[0], blob_center[1]),
-                    (blob_axes[0], blob_axes[1]),
-                    blob_angle, 0, 360, color, -1)
-        return blob, blob_center, blob_axes[::-1] * 2, blob_angle
-
-    def get_blobfinder(self):
-        mask, image = self.get_maskbackground()
-        bfinder = BlobFinder(mask)
-        bfinder.run(image)
-        return bfinder
-
     def test_setget_image(self):
-        mask, image = self.get_maskbackground()
-        blob = self.get_randomblob(mask, image)[0]
-        bfinder = self.get_blobfinder()
-        bfinder.run(blob)
-        myim = bfinder.original_image
-        self.assertTrue(np.allclose(myim, blob))
+        myim = self.bfinder.original_image
+        self.assertTrue(np.allclose(myim, self.blob))
 
     def test_masked(self):
         myim = self.bfinder.masked_image

@@ -54,7 +54,7 @@ class Ellipse():
         x_spread = 2 * np.sqrt(((self.height / 2) * np.cos(angle))**2 +
                                ((self.width / 2) * np.sin(angle))**2)
         y_spread = 2 * np.sqrt(((self.height / 2) * np.sin(angle))**2 +
-                               ((self.angle / 2) * np.cos(angle))**2)
+                               ((self.width / 2) * np.cos(angle))**2)
         return x_spread, y_spread
 
     @property

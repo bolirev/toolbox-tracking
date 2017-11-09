@@ -23,10 +23,11 @@ class BlobFinder():
         # Define 'private' variable
         self.__fgbg = cv2.createBackgroundSubtractorKNN()
         # Declare parameters
-        if not isinstance(mask_image, np.ndarray):
-            raise TypeError('mask_image is not an ndarray')
-        if mask_image.ndim != 2:
-            raise TypeError('mask_image should have 2 dimension')
+        if mask_image is not None:
+            if not isinstance(mask_image, np.ndarray):
+                raise TypeError('mask_image is not an ndarray')
+            if mask_image.ndim != 2:
+                raise TypeError('mask_image should have 2 dimension')
         self.mask_image = mask_image
         self.erode_iter = 2
         self.dilate_iter = 2
@@ -80,11 +81,14 @@ class BlobFinder():
 
     def run(self, image):
         if not isinstance(image, np.ndarray):
-            raise TypeError('mask_image is not an ndarray')
-        if image.ndim != self.mask_image.ndim:
-            raise TypeError('mask and image should have the same dimension')
-        if not np.allclose(image.shape, self.mask_image.shape):
-            raise TypeError('mask and image should have the same dimension')
+            raise TypeError('image is not an ndarray')
+        if self.mask_image is not None:
+            if image.ndim != self.mask_image.ndim:
+                raise TypeError(
+                    'mask and image should have the same dimension')
+            if not np.allclose(image.shape, self.mask_image.shape):
+                raise TypeError(
+                    'mask and image should have the same dimension')
         self.__orig_image = image
         self.mask()
         self.blur()

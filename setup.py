@@ -1,17 +1,5 @@
 #!/usr/bin/env python
-"""
-setup.py for toolbox-tracking
-
-for install it needs:
-pip install opencv-python
-pip install matplotlib
-pip install pandas
-pip install scipy
-
-sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran
-sudo apt-get install libboost-all-dev
-python install setup.py
-
+""" setup.py for 3d reconstruction and calibration
 """
 from setuptools import setup, find_packages
 
@@ -33,12 +21,14 @@ def create_package_list(base_package):
              if not exclude_package(pkg)])
 
 
-setup_info = dict(name='btracker',
-                  version='0.1',
-                  author="Olivier J.N. Bertrand",
-                  description='Tracking of Blobs, like bees or flies',
-                  packages=create_package_list('btracker'),
-                  requires=['numpy', 'cv2', 'pandas', 'scipy'],
-                  install_requires=["numpy", 'pandas', 'scipy'])
+setup_dict = {'name': 'btracker',
+              'version': '0.1',
+              'author': "Olivier J.N. Bertrand",
+              'author_email': 'olivier.bertrand@uni-bielefeld.de',
+              'description': 'Camera calibration and 3d reconstruction',
+              'packages': create_package_list("btracker"),
+              'requires': ['numpy', 'pandas', 'matplotlib', 'opencv'],
+              'install_requires': ["numpy", 'pandas', 'matplotlib',
+                                   'sphinx_rtd_theme','opencv-python']}
 
-setup(**setup_info)
+setup(**setup_dict)

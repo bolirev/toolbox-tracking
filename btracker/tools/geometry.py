@@ -6,12 +6,14 @@ import numpy as np
 
 
 class Ellipse():
-    def __init__(self):
-        self.__x = None
-        self.__y = None
-        self.__height = None
-        self.__width = None
-        self.__angle = None
+    def __init__(self,x=0,y=0,
+                 height=1, width=1,
+                 angle=0):
+        self.__x = x
+        self.__y = y
+        self.__height = height
+        self.__width = width
+        self.__angle = angle
 
     def from_opencv_tuples(self, opencv):
         self.__x = opencv[0][0]
@@ -23,22 +25,38 @@ class Ellipse():
     @property
     def x(self):
         return self.__x
+    
+    @x.setter
+    def x(self, x):
+        self.__x = x
 
     @property
     def y(self):
         return self.__y
+    @y.setter
+    def y(self, y):
+        self.__y = y
 
     @property
     def height(self):
         return self.__height
+    @height.setter
+    def height(self, h):
+        self.__height = h
 
     @property
     def width(self):
         return self.__width
+    @width.setter
+    def w(self, w):
+        self.__width = w
 
     @property
     def angle(self):
         return self.__angle
+    @angle.setter
+    def angle(self, a):
+        self.__angle = a
 
     @property
     def roundness(self):

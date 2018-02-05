@@ -81,7 +81,7 @@ def processed_image(bfinder, scale=0.2,
         ellipses = bfinder.filtered_contours
     if not isinstance(bfinder, BlobFinder):
         raise TypeError('bfinder should be BlobFinder type')
-    im2display = bfinder.processed_image
+    im2display = bw2color(bfinder.processed_image)
     windowname = 'processed_image'
     overlay_ellipses(ellipses, im2display, overlay_firstn_ellipses)
     return draw(im2display, windowname, scale, frame_i)

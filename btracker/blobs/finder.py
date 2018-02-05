@@ -9,11 +9,12 @@ from btracker.tools.geometry import Ellipse
 
 class BlobFinder():
 
-    def __init__(self, mask_image):
+    def __init__(self, mask_image, fgbg=cv2.createBackgroundSubtractorKNN()):
         # Define get only variable variable
         self.__orig_image = None
         self.__masked_image = None
         self.__segmented_image = None
+        self.__thresholded_image = None
         self.__blured_image = None
         self.__eroded_image = None
         self.__dilated_image = None
@@ -21,7 +22,7 @@ class BlobFinder():
         self.__contours = None
         self.__filtered_contours = None
         # Define 'private' variable
-        self.__fgbg = cv2.createBackgroundSubtractorKNN()
+        self.__fgbg = fgbg
         # Declare parameters
         if mask_image is not None:
             if not isinstance(mask_image, np.ndarray):
@@ -53,6 +54,10 @@ class BlobFinder():
     @property
     def segmented_image(self):
         return self.__segmented_image
+
+    @property
+    def thresholded_image(self):
+        return self.__thresholded_image
 
     @property
     def dilated_image(self):
@@ -93,6 +98,7 @@ class BlobFinder():
         self.mask()
         self.blur()
         self.segment()
+        self.binarize()
         self.dilate()
         self.erode()
         self.__processed_image = self.__eroded_image
@@ -117,14 +123,19 @@ class BlobFinder():
                                                     self.gaussian_blur), 0)
 
     def segment(self):
-        self.__segmented_image = self.__fgbg.apply(self.__blured_image)
-        self.__segmented_image = cv2.threshold(self.__segmented_image,
+        if self.__fgbg is None:
+            self.__segmented_image = self.__blured_image
+        else:
+            self.__segmented_image = self.__fgbg.apply(self.__blured_image)
+
+    def binarize(self):
+        self.__thresholded_image = cv2.threshold(self.__segmented_image,
                                                self.threshold,
                                                255,
                                                cv2.THRESH_BINARY)[1]
 
     def dilate(self):
-        self.__dilated_image = cv2.dilate(self.__segmented_image, None,
+        self.__dilated_image = cv2.dilate(self.__thresholded_image, None,
                                           iterations=self.dilate_iter)
 
     def erode(self):

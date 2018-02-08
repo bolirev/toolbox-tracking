@@ -59,15 +59,9 @@ def emsvd(Y, k=None, tol=1E-3, maxiter=None):
     return Y_hat, mu_hat, U, s, Vt
 
 
-def random_projects_points(npoints, edge_length, cameras_calib):
+def projects_points(pts_3d, cameras_calib):
     ncameras = len(cameras_calib)
     pts_cam = list()
-    pts_3d = (np.random.rand(npoints, 3) - 0.5) * 2
-    pts_3d[:, 2] += 1
-    pts_3d[:, 2] *= edge_length
-    pts_3d[:, 1] *= edge_length
-    pts_3d[:, 0] *= edge_length
-
     for cam_i in range(ncameras):
         cam_pose = cameras_calib[cam_i]['pose']
         cam_mat = cameras_calib[cam_i]['intrinsic_matrix']
@@ -77,6 +71,19 @@ def random_projects_points(npoints, edge_length, cameras_calib):
         impoints, jacobian = cv2.projectPoints(
             pts_3d, rvec, tvec, cam_mat, cam_dist)
         pts_cam.append(np.squeeze(impoints))
+    pts_cam = np.array(pts_cam)
+    return pts_cam
+
+
+def random_projects_points(npoints, edge_length, cameras_calib):
+    ncameras = len(cameras_calib)
+    pts_3d = (np.random.rand(npoints, 3) - 0.5) * 2
+    pts_3d[:, 2] += 1
+    pts_3d[:, 2] *= edge_length
+    pts_3d[:, 1] *= edge_length
+    pts_3d[:, 0] *= edge_length
+
+    pts_cam = projects_points(pts_3d, cameras_calib)
     return pts_cam, pts_3d
 
 

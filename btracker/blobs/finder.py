@@ -95,52 +95,53 @@ class BlobFinder():
                 raise TypeError(
                     'mask and image should have the same dimension')
         self.__orig_image = image
+        self.__last_step = image
         self.mask()
         self.blur()
         self.segment()
         self.binarize()
-        self.dilate()
         self.erode()
-        self.__processed_image = self.__eroded_image
+        self.dilate()
+        self.__processed_image = self.__last_step
         self.find_contours()
         if not self.skip_filter_contours:
             self.filter_contours()
 
     def mask(self):
         if self.mask_image is not None:
-            self.__masked_image = cv2.bitwise_and(self.__orig_image,
-                                                  self.__orig_image,
+            self.__last_step = cv2.bitwise_and(self.__last_step,
+                                                  self.__last_step,
                                                   mask=self.mask_image)
-        else:
-            self.__masked_image = self.__orig_image
-
+        self.__masked_image = self.__last_step.copy()
+        
     def blur(self):
-        if self.gaussian_blur < 2:
-            self.__blured_image = self.__masked_image
-        else:
-            self.__blured_image = cv2.GaussianBlur(self.__masked_image,
+        if self.gaussian_blur > 2:
+            self.__last_step = cv2.GaussianBlur(self.__last_step,
                                                    (self.gaussian_blur,
                                                     self.gaussian_blur), 0)
+        self.__blured_image = self.__last_step.copy()
 
     def segment(self):
-        if self.__fgbg is None:
-            self.__segmented_image = self.__blured_image
-        else:
-            self.__segmented_image = self.__fgbg.apply(self.__blured_image)
-
+        if self.__fgbg is not None:
+            self.__last_step = self.__fgbg.apply(self.__last_step)
+        self.__segmented_image = self.__last_step.copy()
+            
     def binarize(self):
-        self.__thresholded_image = cv2.threshold(self.__segmented_image,
+        self.__last_step = cv2.threshold(self.__last_step,
                                                self.threshold,
                                                255,
                                                cv2.THRESH_BINARY)[1]
-
+        self.__thresholded_image = self.__last_step.copy()
+        
     def dilate(self):
-        self.__dilated_image = cv2.dilate(self.__thresholded_image, None,
+        self.__last_step = cv2.dilate(self.__last_step, None,
                                           iterations=self.dilate_iter)
+        self.__dilated_image = self.__last_step.copy()
 
     def erode(self):
-        self.__eroded_image = cv2.erode(self.__dilated_image, None,
+        self.__last_step = cv2.erode(self.__last_step, None,
                                         iterations=self.erode_iter)
+        self.__eroded_image = self.__last_step.copy()
 
     def find_contours(self):
         _, self.__contours, _ = cv2.findContours(self.__processed_image,

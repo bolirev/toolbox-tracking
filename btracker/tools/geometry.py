@@ -48,7 +48,7 @@ class Ellipse():
     def width(self):
         return self.__width
     @width.setter
-    def w(self, w):
+    def width(self, w):
         self.__width = w
 
     @property

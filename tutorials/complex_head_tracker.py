@@ -172,6 +172,7 @@ if __name__ == "__main__":
                                           cv2.RETR_TREE,
                                           cv2.CHAIN_APPROX_SIMPLE)
         contours_filtered= list()
+        ellipses = list()
         for con in contours:
             moments = cv2.moments(con)
             if moments['m00'] <=0:
@@ -180,9 +181,8 @@ if __name__ == "__main__":
             cy = moments['m01']/moments['m00']
             if moments['m00']<=max_area:
                 contours_filtered.append(con)
-        
-        
-        cv2.imwrite('test.jpg',bee_im)
+                ellipses.append(Ellipse(x=cx,y=cy))
+        btio.append(file, frame_i, ellipses)
         # display images when asked
         if (time.time() - t_start) > refresh_time:
             t_start = time.time()
@@ -198,8 +198,6 @@ if __name__ == "__main__":
                              (0,255,0), 3)
             
             cv2.imshow('bee', toplot2)
-            #bfimshow.draw(diff, 'diff', scale, frame_i)
-            #bfimshow.draw(frame, 'frame', scale, frame_i)
     # Before next loop run
     file.close()
     # release cam

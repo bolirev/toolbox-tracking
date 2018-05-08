@@ -1,3 +1,4 @@
+
 """
     simple Tracker is a small python script based on btracker
 """
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     ap.add_argument("-f", "--tra-file",  default=None,
                     help="trajectory file e.g. /fullpath/trajectory.tra to store the tracking result")
     ap.add_argument("-r", "--refresh-time",
-                    default=1,    help="refresh time")
+                    default=np.inf,    help="refresh time")
 
     args = vars(ap.parse_args())
     # Load mask
@@ -89,7 +90,7 @@ if __name__ == "__main__":
         else:
             folder_path = os.path.dirname(args["folder"])
             args["tra_file"] = os.path.join(folder_path, 'trajectory.tra')
-
+    display=False
     bbee = BlobFinder(mask, None)
     bbee.erode_iter = 2
     bbee.dilate_iter = 3
@@ -134,15 +135,17 @@ if __name__ == "__main__":
         #Find largest contours
         bbee.run(diff)
         area  = 0
+        cont = []
         for con in bbee.contours:
             moments = cv2.moments(con)
             if moments['m00'] <=0:
                 continue
-            cx = moments['m10']/moments['m00']
-            cy = moments['m01']/moments['m00']
             if moments['m00']>area:
                 area = moments['m00']
                 cont = con
+                cx_bee = moments['m10']/moments['m00']
+                cy_bee = moments['m01']/moments['m00']
+        
         if len(cont) < 5:
             continue
         ell = Ellipse()
@@ -151,13 +154,11 @@ if __name__ == "__main__":
         ell.height = 1.5* ell.height
         # Crop bee
         mask = diff.copy()*0
-        #mask = cv2.ellipse(mask, (ell.center, ell.size, ell.angle), 255, -1)
         cv2.drawContours(mask, [cont], -1,
                              255, -1) 
-        #diff[mask<128]=0
         bee_im=frame.copy()
         bee_im[mask<128]=0
-        bee_im = btcrop.crop(bee_im,[ell])[0]
+        (bee_im, bee_im_x, bee_im_y) = btcrop.crop(bee_im,[ell])[0]
 
         
         blurred=cv2.GaussianBlur(bee_im,
@@ -181,23 +182,29 @@ if __name__ == "__main__":
             cy = moments['m01']/moments['m00']
             if moments['m00']<=max_area:
                 contours_filtered.append(con)
-                ellipses.append(Ellipse(x=cx,y=cy))
+                ellipses.append(Ellipse(x=cx+bee_im_x,
+                                        y=cy+bee_im_y,
+                                        width = 3,
+                                        height = 3))
         btio.append(file, frame_i, ellipses)
         # display images when asked
-        if (time.time() - t_start) > refresh_time:
-            t_start = time.time()
-            toplot = frame.copy()
-            bfimshow.overlay_ellipses([ell], toplot, np.inf)
-            cv2.drawContours(toplot, cont, -1, (0,255,0), 3)
-            bfimshow.draw(toplot, 'bla', scale, frame_i)
-            toplot2 = bee_im.copy()
-            toplot2 = np.hstack([toplot2,
+        if display:
+            if (time.time() - t_start) > refresh_time:
+                t_start = time.time()
+                toplot = frame.copy()
+                toplot = bfimshow.bw2color(toplot)
+                bfimshow.overlay_ellipses([ell], toplot, np.inf)
+                bfimshow.overlay_ellipses(ellipses, toplot, np.inf)
+                cv2.drawContours(toplot, cont, -1, (0,255,0), 3)
+                bfimshow.draw(toplot, 'bla', scale, frame_i)
+                toplot2 = bee_im.copy()
+                toplot2 = np.hstack([toplot2,
                                  edges])
-            toplot2=bfimshow.bw2color(toplot2)
-            cv2.drawContours(toplot2, contours_filtered, -1,
+                toplot2=bfimshow.bw2color(toplot2)
+                cv2.drawContours(toplot2, contours_filtered, -1,
                              (0,255,0), 3)
             
-            cv2.imshow('bee', toplot2)
+                cv2.imshow('bee', toplot2)
     # Before next loop run
     file.close()
     # release cam

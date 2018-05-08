@@ -5,13 +5,13 @@ from multiprocessing import Pool
 rootfolder = '/media/bolirev/3F7A56957DF052FD/data/20180114_6MarkersBumblebeesLearningFlights/Recordings/'
 
 def process(param):
-        command="python complex_head_tracker.py --refresh-time=1000000 "
+        command="python background_remover.py "
         for key,val in param.items():
                 command=command+key+' '+val+' '
         folder_path = os.path.dirname(param["--folder"])
         filenametra = os.path.join(folder_path, 'trajectory.tra')
-        if os.path.exists(filenametra):
-                return 'TRAEXIST:'+command
+        #if os.path.exists(filenametra):
+        #        return 'TRAEXIST:'+command
         try:
                 os.system(command)
         except:
@@ -30,5 +30,5 @@ if __name__ == '__main__':
                 param_list[-1]['--folder']=os.path.join(fname,
                                                         cam+'_%08d.jpg')
         print('{} will be processed'.format(len(param_list)))
-        p = Pool(7)
+        p = Pool(8)
         print(p.map(process, param_list))

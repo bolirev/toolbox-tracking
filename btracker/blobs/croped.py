@@ -31,5 +31,5 @@ def crop(image, ellipses,
         y_range = np.clip(y_range, 0, image.shape[0] - 1)
         croped_im = image[y_range, ...]
         croped_im = croped_im[:, x_range, ...]
-        croped_images.append(croped_im)
+        croped_images.append((croped_im,min(x_range),min(y_range)))
     return croped_images

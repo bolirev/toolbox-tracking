@@ -1,9 +1,10 @@
 bfinder:
-   erode_iter: 5
-   dilate_iter: 10
-   area_lim: [0, 1000]
+   erode_iter: 15
+   dilate_iter: 40
+   area_lim: [1000, 30000]
    roundness_lim: [0, 1]
    background_init: 60
-   threshold: 10
+   threshold: 128
    gaussian_blur: 51
+
 

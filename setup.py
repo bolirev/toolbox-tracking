@@ -27,8 +27,8 @@ setup_dict = {'name': 'btracker',
               'author_email': 'olivier.bertrand@uni-bielefeld.de',
               'description': 'Camera calibration and 3d reconstruction',
               'packages': create_package_list("btracker"),
-              'requires': ['numpy', 'pandas', 'matplotlib', 'opencv'],
+              'requires': ['numpy', 'pandas', 'matplotlib', 'opencv', 'yaml'],
               'install_requires': ["numpy", 'pandas', 'matplotlib',
-                                   'sphinx_rtd_theme','opencv-python']}
+                                   'sphinx_rtd_theme','opencv-python', 'pyyaml']}
 
 setup(**setup_dict)

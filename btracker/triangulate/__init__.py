@@ -83,7 +83,7 @@ def triangulate_ncam_pairwise(cameras_calib, pts_cam):
             point_3d[comb_i, :, cvalid_id] = cpoint_3d[cvalid_id, :]
             comb_i += 1
 
-    return (np.nansum(point_3d, axis=0) / np.tile(nvalid_comb, (3, 1))).T
+    return (np.nansum(point_3d, axis=0) / np.tile(nvalid_comb, (3, 1))).T,point_3d,nvalid_comb
 
 
 def error_reconstruction(npoints, edge_length, cameras_calib):

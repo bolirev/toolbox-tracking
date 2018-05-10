@@ -9,9 +9,11 @@ from btracker.plot.image import overlay_ellipses
 import yaml
 import glob
 import argparse
-import btracker.io.load_write_2d_tra_file as btio
+import btracker.io.ivfile as btio
 import os
-
+import pandas as pd
+import time
+from btracker.blobs.croped import crop
 
 def load_config(config_yaml):
     with open(config_yaml, 'r') as stream:
@@ -30,9 +32,11 @@ def update_config_bfinder(bfinder, conf):
     """
     bfinder.erode_iter = conf['erode_iter']
     bfinder.dilate_iter = conf['dilate_iter']
+    bfinder.dilate_iter_first = conf['dilate_iter_first']
     bfinder.area_lim = conf['area_lim']
     bfinder.roundness_lim = conf['roundness_lim']
     bfinder.background_init = conf['background_init']
+    bfinder.background_learning_rate = conf['background_learning_rate']
     bfinder.threshold = conf['threshold']
     bfinder.gaussian_blur = conf['gaussian_blur']
 
@@ -52,7 +56,7 @@ def parser_tracker():
     arghelp = 'Path to trajectory'
     parser.add_argument('--tra-file',
                         type=str,
-                        default='trajectory.tra',
+                        default='trajectory.hdf',
                         help=arghelp)
     arghelp = 'Scale to display images'
     parser.add_argument('--scale',
@@ -64,10 +68,12 @@ def parser_tracker():
 
 args = parser_tracker().parse_args()
 template_frame = args.images
-state = 'framebyframe'
+state = 'runforward'
 config_yaml =  args.config
 scale =  args.scale
-trafile = open(args.tra_file, 'r+')
+# Parameter for croping
+xmargin = [0, 0]
+ymargin = [0, 0]
 
 if template_frame is None:
     # mask
@@ -77,19 +83,37 @@ if template_frame is None:
     bfinder = BlobFinder(mask)
 else:
     filelist = sorted(glob.glob(template_frame))
-    bfinder = BlobFinder(None)
+    bfinder = BlobFinder(None, fgbg=cv2.createBackgroundSubtractorKNN())
 
 # Create a bfinder tracker
 config = load_config(config_yaml)
 update_config_bfinder(bfinder, config['bfinder'])
 bfinder.skip_filter_contours = False
 
+# init background
+maxframe = len(filelist)
+print('INIT Background')
+if template_frame is not None:
+    bfinder.background_learning_rate = -1
+    for frame_i in range(bfinder.background_init,0,-1):
+        frame = cv2.imread(filelist[frame_i], 0)  # 0 for blackwhite
+    bfinder.run(frame)
+update_config_bfinder(bfinder, config['bfinder'])
+    
+# Create a dataframe
+ellipses_all = pd.DataFrame(index=range(maxframe),
+                            columns=[])
+
+
 
 frame_i = 0
-
-
-
 while True:
+    # Check that frame number is not above last one
+    # and previous one
+    if frame_i >= (maxframe):
+        break
+    elif frame_i<0:
+        frame_i=0
     # Reload params to allow an interactive way of
     # using the script
     config = load_config(config_yaml)
@@ -113,7 +137,34 @@ while True:
     thresholded_image = bfinder.thresholded_image.copy()
     dilated_image = bfinder.dilated_image.copy()
     eroded_image = bfinder.eroded_image.copy()
-    ellipses = bfinder.filtered_contours
+    croped_images = crop(masked_image, bfinder.filtered_contours, xmargin, ymargin)
+    scores = []
+    for cropim, _,_ in croped_images:
+        cscore = cropim.max()-cropim.min()
+        scores.append(cscore)
+    if len(croped_images)>0:
+        argsort = np.argsort(scores).astype(int)[::-1]
+        ellipses=np.array(bfinder.filtered_contours)[argsort]
+        ellipses=ellipses.tolist()
+    else:
+        ellipses=[]
+    
+    if len(ellipses)>0:
+        columns = []
+        for marki in range(0, len(ellipses)):
+            for coli in btio.get_ellipse_param():
+                columns.append((marki,coli))
+        ellipse_series = pd.Series(index=pd.MultiIndex.from_tuples(columns))
+        for marki, ell in enumerate(ellipses):
+            ellipse_series.loc[(marki,'x')]=ell.x
+            ellipse_series.loc[(marki,'y')]=ell.y
+            ellipse_series.loc[(marki,'orientation')]=ell.angle
+            ellipse_series.loc[(marki,'size')]=ell.area
+            ellipse_series.loc[(marki,'roundness')]=ell.roundness
+        ellipse_series.name=frame_i        
+        if ellipse_series.name in ellipses_all.index:
+            ellipses_all=ellipses_all.drop(ellipse_series.name)
+        ellipses_all=ellipses_all.append(ellipse_series)
     overlay_ellipses(ellipses, masked_image, firstn=len(ellipses))
 
     # Resize and concat image for display
@@ -139,7 +190,6 @@ while True:
          np.hstack([thresholded_image, eroded_image, dilated_image])])
 
     cv2.imshow('Interactive Tracker', todisplay)
-    btio.append(trafile, frame_i, ellipses)
     # -- Start of the interface --
     if state == 'runforward':
         frame_i += 1
@@ -157,31 +207,23 @@ while True:
     elif key == ord('b'):  # Backward by one frame
         state = 'framebyframe'
         frame_i -= 1
-        #Move the pointer (similar to a cursor in a text editor) to the end of the file. 
-        trafile.seek(0, os.SEEK_END)
-
-        #This code means the following code skips the very last character in the file - 
-        #i.e. in the case the last line is null we delete the last line 
-        #and the penultimate one
-        pos = trafile.tell() - 1
-
-        #Read each character in the file one at a time from the penultimate 
-        #character going backwards, searching for a newline character
-        #If we find a new line, exit the search
-        while pos > 0 and trafile.read(1) != "\n":
-            pos -= 1
-            trafile.seek(pos, os.SEEK_SET)
-
-            #So long as we're not at the start of the file, delete all the characters ahead of this position
-            if pos > 0:
-                trafile.seek(pos, os.SEEK_SET)
-                trafile.truncate()
     elif key == ord('r'):  # Run until stop or end
         state = 'runforward'
     elif key == ord('s'):  # Stop and switch to frame by frame
         state = 'framebyframe'
     print(frame_i)
-    trafile.flush()
 
-trafile.close()
+#Saving
+print('Saving')
+mcolumns=pd.MultiIndex.from_tuples(ellipses_all.columns.values)
+mcolumns.rename('marker',level=0, inplace=True)
+mcolumns.rename('ellipse_param',level=1, inplace=True)
+ellipses_all.columns=mcolumns
+ellipses_all.sort_index(inplace=True)
+_, ext = os.path.splitext(args.tra_file)
+if ext == '.hdf':
+    ellipses_all.to_hdf(args.tra_file, key='tracking')
+else:
+    btio.save(args.tra_file, ellipses_all)
+
 cv2.destroyAllWindows()

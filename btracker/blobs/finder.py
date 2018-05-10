@@ -32,9 +32,11 @@ class BlobFinder():
         self.mask_image = mask_image
         self.erode_iter = 2
         self.dilate_iter = 2
+        self.dilate_iter_first = 2
         self.area_lim = [0, 100000]
         self.roundness_lim = [0, 1]
         self.background_init = 60
+        self.background_learning_rate = -1
         self.threshold = 10
         self.gaussian_blur = 21
         self.skip_filter_contours = False
@@ -100,8 +102,9 @@ class BlobFinder():
         self.blur()
         self.segment()
         self.binarize()
+        self.dilate(self.dilate_iter_first)
         self.erode()
-        self.dilate()
+        self.dilate(self.dilate_iter)
         self.__processed_image = self.__last_step
         self.find_contours()
         if not self.skip_filter_contours:
@@ -123,7 +126,8 @@ class BlobFinder():
 
     def segment(self):
         if self.__fgbg is not None:
-            self.__last_step = self.__fgbg.apply(self.__last_step)
+            self.__last_step = self.__fgbg.apply(self.__last_step,
+                                                 learningRate=self.background_learning_rate)
         self.__segmented_image = self.__last_step.copy()
             
     def binarize(self):
@@ -133,9 +137,9 @@ class BlobFinder():
                                                cv2.THRESH_BINARY)[1]
         self.__thresholded_image = self.__last_step.copy()
         
-    def dilate(self):
+    def dilate(self, dilate_factor = 0):
         self.__last_step = cv2.dilate(self.__last_step, None,
-                                          iterations=self.dilate_iter)
+                                          iterations=dilate_factor)
         self.__dilated_image = self.__last_step.copy()
 
     def erode(self):

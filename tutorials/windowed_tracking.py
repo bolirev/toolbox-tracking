@@ -14,6 +14,7 @@ import os
 import pandas as pd
 import time
 from btracker.blobs.croped import crop
+from scipy import signal
 
 def load_config(config_yaml):
     with open(config_yaml, 'r') as stream:
@@ -213,17 +214,45 @@ while True:
         state = 'framebyframe'
     print(frame_i)
 
-#Saving
-print('Saving')
+
 mcolumns=pd.MultiIndex.from_tuples(ellipses_all.columns.values)
 mcolumns.rename('marker',level=0, inplace=True)
 mcolumns.rename('ellipse_param',level=1, inplace=True)
 ellipses_all.columns=mcolumns
 ellipses_all.sort_index(inplace=True)
-_, ext = os.path.splitext(args.tra_file)
-if ext == '.hdf':
-    ellipses_all.to_hdf(args.tra_file, key='tracking')
-else:
-    btio.save(args.tra_file, ellipses_all)
+name, ext = os.path.splitext(args.tra_file)
+
+print('Filter')
+lowpass = config['recording']['lpass']/(config['recording']['fps']/2)
+padlen = config['recording']['padlen']
+b, a = signal.butter(8, lowpass)
+
+marki = 0
+trajbee=ellipses_all.loc[:,marki]
+trajfilt=trajbee.copy()
+
+events = np.split(trajbee, np.where(np.isnan(trajbee.x))[0])
+# removing NaN entries
+events = [ev[~np.isnan(ev.x)] for ev in events if not isinstance(ev, np.ndarray)]
+# removing empty DataFrames
+events = [ev for ev in events if not ev.empty]
+
+for trajno_nan in events:
+    if trajno_nan.shape[0]<padlen:
+        continue    
+    for col in trajno_nan.columns:
+        trajfilt.loc[trajno_nan.index,col] = signal.filtfilt(b, a, trajno_nan.loc[:,col], padlen=padlen)
+
+trajfilt.columns=pd.MultiIndex.from_tuples([(marki,col) for col in trajfilt.columns])
+trajfilt.columns.rename('marker',level=0, inplace=True)
+trajfilt.columns.rename('ellipse_param',level=1, inplace=True)
+
+print('Save HDF')
+trajfilt.to_hdf(name+'filtered.hdf', key='tracking')
+ellipses_all.to_hdf(name+'.hdf', key='tracking')
+
+print('Save tra files')
+btio.save(name+'.tra', ellipses_all)
+btio.save(name+'filtered.tra', trajfilt)
 
 cv2.destroyAllWindows()

@@ -8,3 +8,8 @@ bfinder:
    background_learning_rate: -1
    threshold: 128
    gaussian_blur: 3
+
+recording:
+   fps: 500
+   lpass: 10
+   padlen: 50

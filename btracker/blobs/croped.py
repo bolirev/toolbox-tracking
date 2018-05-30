@@ -15,7 +15,7 @@ def crop(image, ellipses,
     for i, ell in enumerate(ellipses):
         if not isinstance(ell, Ellipse):
             raise TypeError(
-                'Element #{} in ellipses is not of type Ellipse').format(i)
+                'Element #{} in ellipses is not of type Ellipse'.format(i))
         x_spread, y_spread = ell.spread
         x_range = np.arange(np.floor(ell.x - x_spread / 2)
                             - ymargin[0],

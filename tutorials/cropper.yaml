@@ -1,0 +1,15 @@
+cropper:
+   xmargin: [100,100]
+   ymargin: [100,100]
+
+files:
+   rootdir: /media/bolirev/bombus_hortorum/20180114_6markers
+   images: Recorgings
+   tracking: Trackings
+
+bee:
+   number: 5
+   format: 02d
+
+camera:
+   ncamera: 3

@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Ellipse():
-    def __init__(self,x=0,y=0,
+    def __init__(self, x=0, y=0,
                  height=1, width=1,
                  angle=0):
         self.__x = x
@@ -22,10 +22,17 @@ class Ellipse():
         self.__width = opencv[1][1]
         self.__angle = opencv[2]
 
+    def from_ivtrace_series(self, pdseries):
+        self.__x = pdseries.x
+        self.__y = pdseries.y
+        self.__angle = pdseries.orientation
+        self.__width = np.sqrt((4*pdseries.size)/(np.pi*pdseries.roundness))
+        self.__height = self.__width * pdseries.roundness
+
     @property
     def x(self):
         return self.__x
-    
+
     @x.setter
     def x(self, x):
         self.__x = x
@@ -33,6 +40,7 @@ class Ellipse():
     @property
     def y(self):
         return self.__y
+
     @y.setter
     def y(self, y):
         self.__y = y
@@ -40,6 +48,7 @@ class Ellipse():
     @property
     def height(self):
         return self.__height
+
     @height.setter
     def height(self, h):
         self.__height = h
@@ -47,6 +56,7 @@ class Ellipse():
     @property
     def width(self):
         return self.__width
+
     @width.setter
     def width(self, w):
         self.__width = w
@@ -54,6 +64,7 @@ class Ellipse():
     @property
     def angle(self):
         return self.__angle
+
     @angle.setter
     def angle(self, a):
         self.__angle = a

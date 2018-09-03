@@ -29,6 +29,7 @@ class BlobFinder():
                 raise TypeError('mask_image is not an ndarray')
             if mask_image.ndim != 2:
                 raise TypeError('mask_image should have 2 dimension')
+        self.normalise = [0]
         self.mask_image = mask_image
         self.erode_iter = 2
         self.dilate_iter = 2
@@ -99,6 +100,16 @@ class BlobFinder():
         self.__orig_image = image
         self.__last_step = image
         self.mask()
+        if self.normalise[0]:
+            frame = self.__last_step.astype(float).copy()
+            frame -= frame.min()
+            normalise = frame.mean()+self.normalise[1]*frame.std()
+            if normalise > 0:
+                frame /= normalise
+            frame *= 255
+            frame[frame > 255] = 255
+            self.__last_step = frame.astype(np.uint8).copy()
+            self.__masked_image = self.__last_step.copy()
         self.blur()
         self.segment()
         self.binarize()
@@ -113,14 +124,14 @@ class BlobFinder():
     def mask(self):
         if self.mask_image is not None:
             self.__last_step = cv2.bitwise_and(self.__last_step,
-                                                  self.__last_step,
-                                                  mask=self.mask_image)
+                                               self.__last_step,
+                                               mask=self.mask_image)
         self.__masked_image = self.__last_step.copy()
-        
+
     def blur(self):
         if self.gaussian_blur > 2:
             self.__last_step = cv2.GaussianBlur(self.__last_step,
-                                                   (self.gaussian_blur,
+                                                (self.gaussian_blur,
                                                     self.gaussian_blur), 0)
         self.__blured_image = self.__last_step.copy()
 
@@ -129,22 +140,22 @@ class BlobFinder():
             self.__last_step = self.__fgbg.apply(self.__last_step,
                                                  learningRate=self.background_learning_rate)
         self.__segmented_image = self.__last_step.copy()
-            
+
     def binarize(self):
         self.__last_step = cv2.threshold(self.__last_step,
-                                               self.threshold,
-                                               255,
-                                               cv2.THRESH_BINARY)[1]
+                                         self.threshold,
+                                         255,
+                                         cv2.THRESH_BINARY)[1]
         self.__thresholded_image = self.__last_step.copy()
-        
-    def dilate(self, dilate_factor = 0):
+
+    def dilate(self, dilate_factor=0):
         self.__last_step = cv2.dilate(self.__last_step, None,
-                                          iterations=dilate_factor)
+                                      iterations=dilate_factor)
         self.__dilated_image = self.__last_step.copy()
 
     def erode(self):
         self.__last_step = cv2.erode(self.__last_step, None,
-                                        iterations=self.erode_iter)
+                                     iterations=self.erode_iter)
         self.__eroded_image = self.__last_step.copy()
 
     def find_contours(self):

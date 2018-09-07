@@ -102,8 +102,7 @@ class BlobFinder():
         self.mask()
         if self.normalise[0]:
             frame = self.__last_step.astype(float).copy()
-            frame -= frame.min()
-            normalise = frame.mean()+self.normalise[1]*frame.std()
+            normalise = self.normalise[1]
             if normalise > 0:
                 frame /= normalise
             frame *= 255

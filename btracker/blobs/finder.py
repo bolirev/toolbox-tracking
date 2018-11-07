@@ -8,7 +8,10 @@ from btracker.tools.geometry import Ellipse
 
 
 class BlobFinder():
-
+    """
+    A class based on opencv functions to tracj a moving objects
+    against a static background
+    """
     def __init__(self, mask_image, fgbg=cv2.createBackgroundSubtractorKNN()):
         # Define get only variable variable
         self.__orig_image = None

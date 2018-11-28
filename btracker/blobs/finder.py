@@ -18,6 +18,7 @@ class BlobFinder():
         self.__masked_image = None
         self.__segmented_image = None
         self.__thresholded_image = None
+        self.__weighted_image = None
         self.__blured_image = None
         self.__eroded_image = None
         self.__dilated_image = None
@@ -43,11 +44,15 @@ class BlobFinder():
         self.background_learning_rate = -1
         self.threshold = 10
         self.gaussian_blur = 21
+        self.threshold_blobs = None
         self.skip_filter_contours = False
 
     @property
     def original_image(self):
         return self.__orig_image
+    @property
+    def weighted_image(self):
+        return self.__weighted_image
 
     @property
     def masked_image(self):
@@ -115,6 +120,7 @@ class BlobFinder():
         self.blur()
         self.segment()
         self.binarize()
+        self.mask_imth()
         self.dilate(self.dilate_iter_first)
         self.erode()
         self.dilate(self.dilate_iter)
@@ -159,6 +165,22 @@ class BlobFinder():
         self.__last_step = cv2.erode(self.__last_step, None,
                                      iterations=self.erode_iter)
         self.__eroded_image = self.__last_step.copy()
+    def mask_imth(self):
+        if self.threshold_blobs is not None:
+            thsign = np.sign(self.threshold_blobs)
+            if thsign < 0:
+                # invert image
+                cim = 255-self.original_image.copy()
+            else:
+                cim = self.original_image.copy()
+            self.__last_step = cv2.bitwise_and(cim,cim,
+                                               mask=self.__last_step)
+            self.__weighted_image = self.__last_step.copy()
+            self.__last_step = cv2.threshold(self.__last_step,
+                                         np.abs(self.threshold_blobs),
+                                         255,
+                                         cv2.THRESH_BINARY)[1]
+            self.__thresholded_image = self.__last_step.copy()
 
     def find_contours(self):
         _, self.__contours, _ = cv2.findContours(self.__processed_image,
